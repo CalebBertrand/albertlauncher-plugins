@@ -38,9 +38,9 @@ class Plugin(PluginInstance, TriggerQueryHandler):
     def handleTriggerQuery(self, query):
         if not query.isValid:
             return
-# 'ls {scripts_dir} | fzf --filter={query}'.format(scripts_dir=scripts_dir, query=query.string) if len(query.string) > 1 else 
-        command = 'ls {scripts_dir}'.format(scripts_dir=scripts_dir)
-        result = subprocess.run(command.split(' '), stdout=subprocess.PIPE, text=True)
+        command = ['sh', '-c', 'ls {scripts_dir} | fzf --filter="{query}"'.format(scripts_dir=scripts_dir, query=query.string)] if len(query.string) > 1 else ['ls', scripts_dir]
+
+        result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
         lines = sorted(result.stdout.splitlines(), reverse=True)
 
         if not query.isValid:
