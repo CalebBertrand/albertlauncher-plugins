@@ -2,7 +2,7 @@
 # Copyright (c) 2022-2024 Manuel Schneider
 
 """
-An albert launcher plugin for working with running podman containers
+An albert launcher plugin for working with podman containers
 """
 
 
@@ -14,7 +14,7 @@ from albert import *
 md_iid = '2.4'
 md_version = "1.0"
 md_name = "Podman Utils"
-md_description = "View and do simple operations on currently running podman containers"
+md_description = "View and do simple operations on podman containers"
 md_license = "MIT"
 md_bin_dependencies = "fzf"
 md_url = "https://github.com/CalebBertrand"

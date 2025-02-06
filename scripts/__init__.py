@@ -6,9 +6,9 @@ A albert plugin which will allow you to run scripts under a specified folder
 """
 
 
-import shlex
 import subprocess
 from pathlib import Path
+import os
 
 from albert import *
 
@@ -20,8 +20,6 @@ md_license = "MIT"
 md_bin_dependencies = "fzf"
 md_url = "https://github.com/CalebBertrand"
 md_authors = "Caleb Bertrand"
-
-scripts_dir = '/home/caleb/scripts'
 
 class Plugin(PluginInstance, TriggerQueryHandler):
 
@@ -35,27 +33,34 @@ class Plugin(PluginInstance, TriggerQueryHandler):
 
         self.iconUrls = [f"file:{Path(__file__).parent}/terminal.png"]
 
+        home_dir = os.environ['HOME']
+        self.scripts_dir = home_dir + '/scripts'
+
+        
+
     def handleTriggerQuery(self, query):
         if not query.isValid:
             return
-        command = ['sh', '-c', 'ls {scripts_dir} | fzf --filter="{query}"'.format(scripts_dir=scripts_dir, query=query.string)] if len(query.string) > 1 else ['ls', scripts_dir]
+        if len(query.string) > 1:
+            command = ['sh', '-c', 'ls {scripts_dir} | fzf --filter="{query}"'.format(scripts_dir=self.scripts_dir, query=query.string)]
+        else:
+            command = ['ls', self.scripts_dir]
 
         result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-        lines = sorted(result.stdout.splitlines(), reverse=True)
+        lines = [x for x in sorted(result.stdout.splitlines(), reverse=True) if x.endswith('.sh')]
 
         if not query.isValid:
             return
 
         for path in lines:
+            name = Path(path).name.split('.')[0]
             query.add(
                     StandardItem(
                         id=path,
-                        text=Path(path).name,
-                        subtext=path,
-                        iconUrls=self.iconUrls,
+                        text=name,
+                        iconUrls=[self.scripts_dir + '/' + name + '.png'] + self.iconUrls,
                         actions=[
-                            Action("open", "Open", lambda p=path: runDetachedProcess(['sh', scripts_dir + '/' + p]))
+                            Action("open", "Open", lambda p=path: runDetachedProcess(['sh', self.scripts_dir + '/' + p]))
                             ]
                         )
                     )
-
