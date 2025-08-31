@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) 2022-2024 Manuel Schneider
-
 """
 An albert launcher plugin for working with podman containers
 """
@@ -8,10 +5,11 @@ An albert launcher plugin for working with podman containers
 
 import subprocess
 from pathlib import Path
+from time import sleep
 
 from albert import *
 
-md_iid = '2.4'
+md_iid = '3.0'
 md_version = "1.0"
 md_name = "Podman Utils"
 md_description = "View and do simple operations on podman containers"
@@ -23,15 +21,18 @@ md_authors = "Caleb Bertrand"
 
 class Plugin(PluginInstance, TriggerQueryHandler):
 
+    iconUrls = [f"file:{Path(__file__).parent}/docker.png"]
+
     def __init__(self):
         PluginInstance.__init__(self)
-        TriggerQueryHandler.__init__(
-                self, self.id, self.name, self.description,
-                synopsis='<[s]tart|[k]ill|[l]ogs|[r]estart>',
-                defaultTrigger="pod"
-                )
+        TriggerQueryHandler.__init__(self)
 
-        self.iconUrls = [f"file:{Path(__file__).parent}/docker.png"]
+
+    def synopsis(self, query):
+        return '<[s]tart|[k]ill|[l]ogs|[r]estart>'
+
+    def defaultTrigger(self):
+        return 'pod '
 
     def runDetachedScript(self, script):
         runDetachedProcess(['sh', '-c', script])
@@ -41,8 +42,12 @@ class Plugin(PluginInstance, TriggerQueryHandler):
             return
 
         command = ['sh', '-c', 'podman container list -a --noheading --format "{{.ID}}|{{.Names}}|{{.Status}}"']
-        result = subprocess.run(command, stdout=subprocess.PIPE, text=True)
-        lines = sorted(result.stdout.splitlines(), reverse=True)
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
+        proc.wait()
+
+        rawtext = proc.stdout.read()
+        rawLines = filter(lambda x: len(x) > 0, rawtext.split('\n'))
+        sortedLines = sorted(rawLines, reverse=True)
 
         if not query.isValid:
             return
@@ -52,22 +57,20 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                 return
 
             input_command = query.string.strip()
-            
+
             if input_command.startswith('s'):
                 self.runDetachedScript(script='podman container start {}'.format(id))
-
-            if input_command.startswith('l'):
+            elif input_command.startswith('l'):
                 self.runDetachedScript(script='podman container logs -f {}'.format(id))
-
-            if input_command.startswith('k'):
+            elif input_command.startswith('k'):
                 self.runDetachedScript(script='podman container kill {}'.format(id))
-
-            if input_command.startswith('r'):
+            elif input_command.startswith('r'):
                 self.runDetachedScript(script='podman container restart {}'.format(id))
 
-        for line in lines:
+        items = []
+        for line in sortedLines:
             id, name, status = line.split('|')
-            query.add(
+            items.append(
                     StandardItem(
                         id=name,
                         text=name,
@@ -76,4 +79,6 @@ class Plugin(PluginInstance, TriggerQueryHandler):
                         actions=[Action("open", "Open", lambda x=id: handleAction(x))]
                         )
                     )
+
+        query.add(items)
 
